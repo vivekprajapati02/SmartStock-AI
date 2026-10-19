@@ -1,6 +1,6 @@
 # SmartStock AI - Implementation Plan
 
-Status: **Phases 1-4 complete; Phase 5 (forecasting) next**
+Status: **Phases 1-5 complete; Phase 6 (alerts, replenishment, purchase orders) next**
 Author: AI Coding Agent
 Last updated: 2026-10-15
 

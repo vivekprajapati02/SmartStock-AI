@@ -25,6 +25,7 @@ import 'package:smartstock/data/models/inventory_models.dart';
 import 'package:smartstock/data/repositories/analytics_repository.dart';
 import 'package:smartstock/data/repositories/auth_repository.dart';
 import 'package:smartstock/data/repositories/catalog_repository.dart';
+import 'package:smartstock/data/repositories/forecast_repository.dart';
 import 'package:smartstock/data/repositories/import_repository.dart';
 import 'package:smartstock/data/repositories/inventory_repository.dart';
 
@@ -37,6 +38,7 @@ class _Client {
     inventory = ApiInventoryRepository(api, InMemoryCacheStore());
     analytics = ApiAnalyticsRepository(api, InMemoryCacheStore());
     imports = ApiImportRepository(api);
+    forecasts = ApiForecastRepository(api);
   }
 
   late final AppConfig config;
@@ -47,6 +49,7 @@ class _Client {
   late final InventoryRepository inventory;
   late final AnalyticsRepository analytics;
   late final ImportRepository imports;
+  late final ForecastRepository forecasts;
 }
 
 void main() {
@@ -254,5 +257,31 @@ void main() {
       expect(await fresh.imports.downloadTemplate(),
           startsWith('sku,store,sale_date,quantity\nIMP-1,HQ,'));
     });
+
+    test('backtest persists measured metrics and forecasts use the selected model', () async {
+      final cmp = await c.forecasts.runBacktest(7, folds: 2);
+      expect(cmp.models.map((m) => m.modelName).toSet(),
+          {'seasonal_naive', 'moving_average', 'exponential_smoothing', 'lightgbm'});
+      expect(cmp.models.where((m) => m.selected), hasLength(1));
+      expect(cmp.isDemo, isTrue);
+      for (final m in cmp.models) {
+        expect(m.metrics!.nPoints, cmp.nSeries * 7 * 2);
+      }
+      final stored = await c.forecasts.comparison(7);
+      expect(stored.models.map((m) => m.id).toSet(), cmp.models.map((m) => m.id).toSet());
+
+      final run = await c.forecasts.generate(7);
+      expect(run!.modelName, cmp.selectedModel);
+      final products = await c.catalog.listProducts(limit: 1);
+      final stores = await c.catalog.listStores();
+      final series = await c.forecasts.series(
+        productId: products.items.first.id,
+        storeId: stores.items.first.id,
+        horizon: 7,
+      );
+      expect(series.forecast, hasLength(7));
+      expect(series.history, hasLength(60));
+      expect(series.forecast.first.day.isAfter(series.history.last.day), isTrue);
+    }, timeout: const Timeout(Duration(minutes: 3)));
   });
 }

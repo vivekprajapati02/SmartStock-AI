@@ -201,3 +201,56 @@ One batch including its error report. Another organisation's batch returns `404`
 ### `GET /api/v1/imports/template`
 `text/csv` header plus one example row using the organisation's own first SKU
 and store with quantity `0` (header only when the catalogue is empty).
+
+## Forecasting and model evaluation
+
+See `docs/ML.md` for models, backtesting and metric definitions. Horizons:
+`7`, `14`, `30`, `90` (anything else is `422`). Running a backtest or
+generating forecasts requires `manager`+; reading requires any role.
+
+### `POST /api/v1/models:backtest`
+Request `{"horizon": 30, "folds": 3}` (folds 1-6). Trains and scores every
+model chronologically, stores the results, and returns the comparison below.
+`422` when there is no sales history or too little for the horizon x folds.
+
+### `GET /api/v1/models/comparison?horizon=30`
+Latest stored backtest for the horizon (field values below only illustrate
+the shape; real responses carry measured numbers):
+
+```json
+{
+  "horizon": 30, "group_id": "...", "run_at": "...", "folds": 3,
+  "dataset_start": "2025-09-15", "dataset_end": "2026-10-19",
+  "cutoffs": ["2026-07-21", "2026-08-20", "2026-09-19"], "n_series": 30,
+  "models": [
+    {"id": "...", "model_name": "lightgbm", "kind": "backtest", "selected": true, "is_baseline": false,
+     "metrics": {"mae": 0.0, "rmse": 0.0, "wape": 0.0, "bias": 0.0, "n_points": 2700}, "params": {}}
+  ],
+  "selected_model": "lightgbm", "best_baseline": "moving_average",
+  "wape_improvement_vs_baseline": 0.0,
+  "forecast_vs_actual": [{"day": "2026-09-20", "actual": 0.0, "predicted": 0.0}],
+  "is_demo": true
+}
+```
+
+`models` is sorted best-first by WAPE. With no backtest yet, `models` is `[]`
+and `selected_model` is `null`. `forecast_vs_actual` is the selected model's
+last fold summed over all series per day.
+
+### `GET /api/v1/models/runs?horizon=&kind=backtest|forecast&limit=&offset=`
+Paginated run history, newest first.
+
+### `POST /api/v1/forecasts:generate`
+Request `{"horizon": 30}`. Uses the model selected by the latest backtest for
+the horizon (running one first if none exists), refits it on all history and
+stores forecasts for `dataset_end + 1 ... dataset_end + horizon` for every
+SKU/store with at least 56 days of history. It replaces the previous forecast
+run for that horizon and returns the first page of `GET /forecasts`.
+
+### `GET /api/v1/forecasts?horizon=&product_id=&store_id=&limit=&offset=`
+Points from the latest forecast run: `{"run": {...} | null, "items": [{"product_id", "store_id", "sku", "product_name", "store_name", "forecast_date", "quantity"}], "total", "limit", "offset"}`.
+
+### `GET /api/v1/forecasts/series?product_id=&store_id=&horizon=&history_days=60`
+Recent actual daily sales (zero-filled) plus the stored forecast for one
+SKU/store: `{"run", "history": [{"day", "quantity"}], "forecast": [...]}`.
+Another organisation's product or store returns `404`.

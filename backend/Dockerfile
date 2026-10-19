@@ -25,9 +25,10 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
 
-# libpq is required by psycopg2 at runtime; curl is used by the healthcheck.
+# libpq is required by psycopg2 at runtime, libgomp1 (OpenMP) by LightGBM;
+# curl is used by the healthcheck.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq5 curl \
+    && apt-get install -y --no-install-recommends libpq5 libgomp1 curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 1000 appuser
 

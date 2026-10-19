@@ -4,14 +4,16 @@ AI-powered inventory and demand forecasting platform.
 
 - **Mobile / Web / Desktop client:** Flutter + GetX + Dio (Phase 3)
 - **Backend:** Python + FastAPI + SQLAlchemy + Alembic + PostgreSQL
-- **ML:** pandas / NumPy / scikit-learn / LightGBM (Phase 5)
+- **ML:** pandas / NumPy / scikit-learn / LightGBM (see `docs/ML.md`)
 
 This repository currently contains **Phases 2 and 3**: the backend foundation
 (schema, auth/RBAC, tenant isolation, synthetic demo data, Docker tooling) plus
 catalogue, inventory-movement and dashboard APIs, the Flutter client with
 Auth, Dashboard, Inventory, Movements and Catalogue screens on those real APIs,
-and (Phase 4) sales-history CSV import with validation, duplicate detection and
-per-row error reports. Forecasting, alerts and purchase orders are later phases.
+(Phase 4) sales-history CSV import with validation, duplicate detection and
+per-row error reports, and (Phase 5) demand forecasting with baselines and
+LightGBM evaluated by chronological backtesting. Alerts, replenishment and
+purchase orders are Phase 6.
 
 See `docs/IMPLEMENTATION_PLAN.md` for the full phased plan.
 
@@ -116,7 +118,9 @@ Screens: sign in / register, Dashboard (KPIs + daily demand chart, 7/30/90
 days), Inventory (search, store and low-stock filters, detail with
 replenishment settings), Movements (ledger + record in/out/adjust), Catalogue
 (products, stores, categories, suppliers), Imports (upload a sales CSV, see
-history and a per-line problem report). Write actions are only shown to
+history and a per-line problem report), Forecasts (actual sales and the stored
+forecast for any SKU/store), Model evaluation (stored backtest metrics per
+model, which model was selected and why, forecast vs actual). Write actions are only shown to
 `manager` and above; the backend enforces the same rule. Access tokens are
 refreshed automatically on a 401. When the server is unreachable, the last
 successfully loaded dashboard and first inventory page are shown with an
@@ -167,6 +171,10 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `POST` | `/api/v1/imports` | Upload a sales CSV (multipart); returns the batch report |
 | `GET` | `/api/v1/imports`, `/api/v1/imports/{id}` | Import history and per-row errors |
 | `GET` | `/api/v1/imports/template` | CSV header + example row from your catalogue |
+| `POST` | `/api/v1/models:backtest` | Chronological backtest of all models (stored) |
+| `GET` | `/api/v1/models/comparison`, `/api/v1/models/runs` | Stored backtest metrics and run history |
+| `POST` | `/api/v1/forecasts:generate` | Forecast every SKU/store with the selected model |
+| `GET` | `/api/v1/forecasts`, `/api/v1/forecasts/series` | Stored forecasts; history + forecast for one SKU/store |
 
 All errors share one envelope:
 
@@ -238,4 +246,5 @@ LIVE_API_URL=http://localhost:8000 flutter test test/live
 - `docs/IMPLEMENTATION_PLAN.md` — phased plan and decisions
 - `docs/ARCHITECTURE.md` — backend architecture and data model
 - `docs/API.md` — endpoint reference
+- `docs/ML.md` — forecasting models, backtesting, metrics and limitations
 - `docs/DEPLOYMENT.md` — deployment guidance

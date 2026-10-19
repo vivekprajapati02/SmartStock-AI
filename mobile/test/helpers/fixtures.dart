@@ -119,3 +119,44 @@ Map<String, dynamic> importJson({
           ],
       'errors_truncated': truncated,
     };
+
+Map<String, dynamic> runJson(String name, {double wape = 0.2, bool selected = false, bool baseline = true, String kind = 'backtest'}) => {
+      'id': 'run-$name',
+      'model_name': name,
+      'kind': kind,
+      'horizon': 30,
+      'group_id': 'g1',
+      'selected': selected,
+      'is_baseline': baseline,
+      'metrics': {'mae': 1.5, 'rmse': 2.25, 'wape': wape, 'bias': -0.031, 'n_points': 2700},
+      'params': {'kind': kind},
+      'dataset_start': '2025-09-15',
+      'dataset_end': '2026-10-19',
+      'trained_at': '2026-10-19T10:00:00Z',
+    };
+
+Map<String, dynamic> comparisonJson({bool empty = false, bool demo = true, String selected = 'lightgbm'}) => empty
+    ? {'horizon': 30, 'models': [], 'n_series': 0, 'is_demo': demo, 'cutoffs': [], 'forecast_vs_actual': []}
+    : {
+        'horizon': 30,
+        'group_id': 'g1',
+        'run_at': '2026-10-19T10:00:00Z',
+        'dataset_start': '2025-09-15',
+        'dataset_end': '2026-10-19',
+        'folds': 3,
+        'cutoffs': ['2026-07-21', '2026-08-20', '2026-09-19'],
+        'n_series': 30,
+        'models': [
+          runJson('lightgbm', wape: 0.156, selected: selected == 'lightgbm', baseline: false),
+          runJson('moving_average', wape: 0.163, selected: selected == 'moving_average'),
+          runJson('seasonal_naive', wape: 0.222),
+        ],
+        'selected_model': selected,
+        'best_baseline': 'moving_average',
+        'wape_improvement_vs_baseline': selected == 'lightgbm' ? 0.0429 : 0.0,
+        'forecast_vs_actual': [
+          {'day': '2026-10-18', 'actual': 700.0, 'predicted': 690.5},
+          {'day': '2026-10-19', 'actual': 650.0, 'predicted': 660.0},
+        ],
+        'is_demo': demo,
+      };

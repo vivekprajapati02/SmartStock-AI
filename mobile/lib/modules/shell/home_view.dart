@@ -7,6 +7,7 @@ import '../../routes/app_routes.dart';
 import '../../widgets/common.dart';
 import '../catalog/catalog_view.dart';
 import '../dashboard/dashboard_view.dart';
+import '../forecasting/forecasting_views.dart';
 import '../imports/imports_view.dart';
 import '../inventory/inventory_view.dart';
 import '../movements/movements_view.dart';
@@ -15,55 +16,72 @@ class HomeController extends GetxController {
   final RxInt tab = 0.obs;
 }
 
-class _Destination {
-  const _Destination(this.label, this.icon, this.selectedIcon);
+class AppSection {
+  const AppSection(this.label, this.icon, this.selectedIcon, this.builder,
+      {this.group, this.showRecordMovement = false});
 
   final String label;
   final IconData icon;
   final IconData selectedIcon;
+  final Widget Function() builder;
+
+  /// Header shown above the first section of a group in the drawer.
+  final String? group;
+  final bool showRecordMovement;
 }
 
-const _destinations = [
-  _Destination('Dashboard', Icons.dashboard_outlined, Icons.dashboard),
-  _Destination('Inventory', Icons.inventory_2_outlined, Icons.inventory_2),
-  _Destination('Movements', Icons.swap_vert, Icons.swap_vert_circle),
-  _Destination('Catalogue', Icons.category_outlined, Icons.category),
-  _Destination('Imports', Icons.upload_file_outlined, Icons.upload_file),
+final List<AppSection> appSections = [
+  AppSection('Dashboard', Icons.dashboard_outlined, Icons.dashboard,
+      () => const DashboardView()),
+  AppSection('Inventory', Icons.inventory_2_outlined, Icons.inventory_2,
+      () => const InventoryView(),
+      group: 'Operations', showRecordMovement: true),
+  AppSection('Movements', Icons.swap_vert, Icons.swap_vert_circle,
+      () => const MovementsView(), showRecordMovement: true),
+  AppSection('Catalogue', Icons.category_outlined, Icons.category,
+      () => const CatalogView()),
+  AppSection('Imports', Icons.upload_file_outlined, Icons.upload_file,
+      () => const ImportsView()),
+  AppSection('Forecasts', Icons.auto_graph_outlined, Icons.auto_graph,
+      () => const ForecastView(),
+      group: 'Planning'),
+  AppSection('Model evaluation', Icons.fact_check_outlined, Icons.fact_check,
+      () => const EvaluationView()),
 ];
 
-/// Responsive app shell: bottom navigation on phones, a rail on wider screens.
+int sectionIndex(String label) => appSections.indexWhere((s) => s.label == label);
+
+/// Responsive shell: a permanent navigation panel on wide screens and a
+/// slide-out drawer on phones.
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
-  Widget _page(int index) {
-    switch (index) {
-      case 0:
-        return const DashboardView();
-      case 1:
-        return const InventoryView();
-      case 2:
-        return const MovementsView();
-      case 3:
-        return const CatalogView();
-      default:
-        return const ImportsView();
-    }
-  }
+  static const _wideBreakpoint = 900.0;
 
   @override
   Widget build(BuildContext context) {
     final home = Get.find<HomeController>();
     return LayoutBuilder(builder: (context, constraints) {
-      final wide = constraints.maxWidth >= 600;
+      final wide = constraints.maxWidth >= _wideBreakpoint;
       return Obx(() {
-        final index = home.tab.value;
-        final body = KeyedSubtree(key: ValueKey(index), child: _page(index));
+        final index = home.tab.value.clamp(0, appSections.length - 1);
+        final section = appSections[index];
+        final nav = _NavPanel(
+          selected: index,
+          onSelected: (i) {
+            home.tab.value = i;
+            if (!wide) Navigator.of(context).maybePop();
+          },
+        );
+        final body = KeyedSubtree(key: ValueKey(index), child: section.builder());
         return Scaffold(
           appBar: AppBar(
-            title: Text(_destinations[index].label),
+            title: Text(section.label),
+            automaticallyImplyLeading: !wide,
             actions: const [_OfflineIndicator(), _UserMenu()],
           ),
-          floatingActionButton: (index == 1 || index == 2)
+          drawer: wide ? null : nav,
+          floatingActionButton: section.showRecordMovement
               ? RoleGate(
                   child: FloatingActionButton.extended(
                     key: const Key('home-record-movement'),
@@ -73,36 +91,10 @@ class HomeView extends StatelessWidget {
                   ),
                 )
               : null,
-          bottomNavigationBar: wide
-              ? null
-              : NavigationBar(
-                  selectedIndex: index,
-                  onDestinationSelected: (i) => home.tab.value = i,
-                  destinations: [
-                    for (final d in _destinations)
-                      NavigationDestination(
-                        icon: Icon(d.icon),
-                        selectedIcon: Icon(d.selectedIcon),
-                        label: d.label,
-                      ),
-                  ],
-                ),
           body: wide
               ? Row(
                   children: [
-                    NavigationRail(
-                      selectedIndex: index,
-                      onDestinationSelected: (i) => home.tab.value = i,
-                      labelType: NavigationRailLabelType.all,
-                      destinations: [
-                        for (final d in _destinations)
-                          NavigationRailDestination(
-                            icon: Icon(d.icon),
-                            selectedIcon: Icon(d.selectedIcon),
-                            label: Text(d.label),
-                          ),
-                      ],
-                    ),
+                    SizedBox(width: 260, child: nav),
                     const VerticalDivider(width: 1),
                     Expanded(child: body),
                   ],
@@ -111,6 +103,45 @@ class HomeView extends StatelessWidget {
         );
       });
     });
+  }
+}
+
+class _NavPanel extends StatelessWidget {
+  const _NavPanel({required this.selected, required this.onSelected});
+
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return NavigationDrawer(
+      key: const Key('nav-panel'),
+      selectedIndex: selected,
+      onDestinationSelected: onSelected,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(28, 20, 16, 12),
+          child: Row(children: [
+            Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('SmartStock AI', style: theme.textTheme.titleMedium),
+          ]),
+        ),
+        for (final s in appSections) ...[
+          if (s.group != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 16, 16, 8),
+              child: Text(s.group!, style: theme.textTheme.labelMedium),
+            ),
+          NavigationDrawerDestination(
+            icon: Icon(s.icon),
+            selectedIcon: Icon(s.selectedIcon),
+            label: Text(s.label),
+          ),
+        ],
+      ],
+    );
   }
 }
 

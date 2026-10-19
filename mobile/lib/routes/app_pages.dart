@@ -7,6 +7,7 @@ import '../modules/auth/auth_views.dart';
 import '../modules/auth/splash_view.dart';
 import '../modules/catalog/catalog_controllers.dart';
 import '../modules/dashboard/dashboard_controller.dart';
+import '../modules/forecasting/forecasting_controllers.dart';
 import '../modules/imports/imports_controller.dart';
 import '../modules/imports/imports_view.dart';
 import '../modules/inventory/inventory_controller.dart';
@@ -44,6 +45,8 @@ class HomeBinding extends Bindings {
     Get.lazyPut(() => CategoriesController(Get.find()));
     Get.lazyPut(() => SuppliersController(Get.find()));
     Get.lazyPut(() => ImportsController(Get.find(), Get.find()));
+    Get.lazyPut(() => ForecastController(Get.find(), Get.find()));
+    Get.lazyPut(() => EvaluationController(Get.find()));
   }
 }
 

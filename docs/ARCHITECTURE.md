@@ -67,6 +67,17 @@ import), everything is rolled back and a `failed` batch is recorded instead, so
 an import is never half-applied. Imported sales feed the dashboard demand trend
 and, from Phase 5, forecasting.
 
+## Forecasting
+
+`app/ml` is framework-free: `series.py` builds zero-filled daily series from
+`sales_history`, `models.py` holds three baselines and a global LightGBM
+model behind one `fit(histories, horizon)` / `predict(histories, horizon)`
+contract, and `backtest.py` runs rolling-origin evaluation that only ever
+passes data up to each cutoff. `services/forecast_service.py` persists one
+`model_runs` row per model per backtest (measured metrics) and the forecasts,
+and selects LightGBM only when it strictly beats the best baseline. Details in
+`docs/ML.md`.
+
 ## Data model
 
 | Table | Purpose |
