@@ -6,10 +6,10 @@ AI-powered inventory and demand forecasting platform.
 - **Backend:** Python + FastAPI + SQLAlchemy + Alembic + PostgreSQL
 - **ML:** pandas / NumPy / scikit-learn / LightGBM (Phase 5)
 
-This repository currently contains the **Phase 2 backend foundation**: project
-skeleton, full database schema with migrations, multi-tenant isolation, JWT
-authentication with role-based access control, synthetic demo data, health
-checks, Docker tooling, and tests.
+This repository currently contains the **Phase 2 backend foundation plus Phase 3
+backend APIs**: schema, auth/RBAC, tenant isolation, catalogue, inventory
+movements, dashboard analytics from stored data, synthetic demo data, Docker
+tooling, and tests. The Flutter client is still pending.
 
 See `docs/IMPLEMENTATION_PLAN.md` for the full phased plan.
 
@@ -18,7 +18,7 @@ See `docs/IMPLEMENTATION_PLAN.md` for the full phased plan.
 ```
 backend/
   app/
-    api/v1/       # routers (auth, users, health)
+    api/v1/       # routers (auth, users, catalog, products, inventory, analytics)
     core/         # config, logging, errors, security, rbac
     db/           # base, session (RLS context), rls helpers
     models/       # SQLAlchemy ORM models (org-scoped)
@@ -107,6 +107,13 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `GET` | `/api/v1/auth/me` | Current authenticated user |
 | `GET` | `/api/v1/users` | List users in the caller's organisation (admin/owner) |
 | `POST` | `/api/v1/users` | Create a user in the caller's organisation (admin/owner) |
+| `GET/POST/PATCH/DELETE` | `/api/v1/categories` | Category CRUD |
+| `GET/POST/PATCH/DELETE` | `/api/v1/suppliers` | Supplier CRUD |
+| `GET/POST/PATCH/DELETE` | `/api/v1/stores` | Store CRUD |
+| `GET/POST/PATCH` | `/api/v1/products` | Product CRUD (SKU unique per org) |
+| `GET/PATCH` | `/api/v1/inventory` | Inventory list/get/settings |
+| `GET/POST` | `/api/v1/movements` | Stock movements (transactional) |
+| `GET` | `/api/v1/analytics/dashboard` | Dashboard metrics from stored data |
 
 All errors share one envelope:
 

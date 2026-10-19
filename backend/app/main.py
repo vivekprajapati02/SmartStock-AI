@@ -28,7 +28,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         description=(
             "Backend API for SmartStock AI inventory and demand forecasting. "
-            "Phase 2 provides authentication, RBAC, tenant isolation, and health checks."
+            "Phase 3 adds catalogue, inventory movements, and dashboard analytics."
         ),
         docs_url="/docs",
         redoc_url="/redoc",

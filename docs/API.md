@@ -111,3 +111,35 @@ organisation.
 | `owner` | 4 |
 
 An endpoint requiring role R accepts any role with rank ≥ R.
+
+## Catalogue
+
+Authenticated. Create/update/delete require `manager` or above.
+
+- `GET/POST /api/v1/categories` and `GET/PATCH/DELETE /api/v1/categories/{id}`
+- `GET/POST /api/v1/suppliers` and `GET/PATCH/DELETE /api/v1/suppliers/{id}`
+- `GET/POST /api/v1/stores` and `GET/PATCH/DELETE /api/v1/stores/{id}`
+- `GET/POST /api/v1/products` and `GET/PATCH /api/v1/products/{id}`
+
+Creating a product (or store) also creates zero-quantity inventory rows for
+every store/product pair. Duplicate names/SKUs in the same org return `409`.
+Cross-org access returns `404`.
+
+## Inventory
+
+- `GET /api/v1/inventory` — list current stock (filters: `store_id`, `low_stock`, `search`)
+- `GET /api/v1/inventory/{id}`
+- `PATCH /api/v1/inventory/{id}` — update reorder point / safety stock / lead time
+- `POST /api/v1/movements` — record `in` / `out` / `adjust` and update quantity
+  on hand in one transaction. Outbound that would go negative returns `422` and
+  does not change stock.
+- `GET /api/v1/movements` — movement ledger
+
+## Analytics
+
+### `GET /api/v1/analytics/dashboard?trend_days=30`
+
+All numbers are computed from stored data: inventory value, SKU/store counts,
+low-stock and stockout counts, pending purchase-order count, and a daily demand
+trend. Empty organisations return zeros, not placeholders. `is_demo` is true
+only when the organisation was created by the seed script.

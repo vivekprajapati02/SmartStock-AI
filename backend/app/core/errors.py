@@ -73,6 +73,12 @@ class PermissionDeniedError(AppError):
     message = "You do not have permission to perform this action."
 
 
+class UnprocessableError(AppError):
+    status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+    code = "unprocessable"
+    message = "The request could not be processed."
+
+
 def _request_id(request: Request) -> str | None:
     return getattr(request.state, "request_id", None)
 
