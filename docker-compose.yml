@@ -1,0 +1,41 @@
+# SmartStock AI - local development stack (API + PostgreSQL).
+# Usage: docker compose up --build
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: smartstock
+      POSTGRES_PASSWORD: smartstock
+      POSTGRES_DB: smartstock
+    ports:
+      - "5432:5432"
+    volumes:
+      - smartstock_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartstock -d smartstock"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      # Overrides the default localhost URL so the API reaches the `db` service.
+      DATABASE_URL: postgresql+psycopg2://smartstock:smartstock@db:5432/smartstock
+      ENVIRONMENT: development
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-to-a-long-random-secret-value}
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      CORS_ORIGINS: "*"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  smartstock_pgdata:
