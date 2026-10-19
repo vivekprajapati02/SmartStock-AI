@@ -212,6 +212,13 @@ def create_store(db: Session, *, org_id: uuid.UUID, name: str, location: str | N
     _ensure_org(db, org_id)
     store = Store(id=uuid.uuid4(), org_id=org_id, name=name.strip(), location=location)
     db.add(store)
+    # Flush the store before the inventory rows referencing it (see
+    # product_service.create_product for why the order matters).
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError("A store with this name already exists.") from exc
     with db.no_autoflush:
         products = db.execute(select(Product).where(Product.org_id == org_id)).scalars().all()
         for product in products:

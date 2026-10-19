@@ -99,6 +99,14 @@ def create_product(
         is_active=is_active,
     )
     db.add(product)
+    # Insert the product before the inventory rows that reference it: with no
+    # ORM relationship between them, the flush order is otherwise undefined and
+    # PostgreSQL (which enforces foreign keys) can reject the inventory insert.
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError("A product with this SKU already exists.") from exc
     with db.no_autoflush:
         stores = db.execute(select(Store).where(Store.org_id == org_id)).scalars().all()
         for store in stores:
