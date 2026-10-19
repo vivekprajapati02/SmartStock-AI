@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import 'core/config/app_config.dart';
 import 'core/connectivity/connectivity_service.dart';
+import 'core/files/csv_file_picker.dart';
 import 'core/network/api_client.dart';
 import 'core/session/session_service.dart';
 import 'core/storage/cache_store.dart';
@@ -11,6 +12,7 @@ import 'core/theme/app_theme.dart';
 import 'data/repositories/analytics_repository.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/catalog_repository.dart';
+import 'data/repositories/import_repository.dart';
 import 'data/repositories/inventory_repository.dart';
 import 'routes/app_pages.dart';
 import 'routes/app_routes.dart';
@@ -47,6 +49,8 @@ Future<void> initServices({
   Get.put<CatalogRepository>(ApiCatalogRepository(api), permanent: true);
   Get.put<InventoryRepository>(
       ApiInventoryRepository(api, cacheStore), permanent: true);
+  Get.put<ImportRepository>(ApiImportRepository(api), permanent: true);
+  Get.put<CsvFilePicker>(PlatformCsvFilePicker(), permanent: true);
   Get.put<AnalyticsRepository>(
       ApiAnalyticsRepository(api, cacheStore), permanent: true);
 

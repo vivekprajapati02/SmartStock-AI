@@ -8,9 +8,10 @@ AI-powered inventory and demand forecasting platform.
 
 This repository currently contains **Phases 2 and 3**: the backend foundation
 (schema, auth/RBAC, tenant isolation, synthetic demo data, Docker tooling) plus
-catalogue, inventory-movement and dashboard APIs, and the Flutter client with
-Auth, Dashboard, Inventory, Movements and Catalogue screens on those real APIs.
-CSV import, forecasting, alerts and purchase orders are later phases.
+catalogue, inventory-movement and dashboard APIs, the Flutter client with
+Auth, Dashboard, Inventory, Movements and Catalogue screens on those real APIs,
+and (Phase 4) sales-history CSV import with validation, duplicate detection and
+per-row error reports. Forecasting, alerts and purchase orders are later phases.
 
 See `docs/IMPLEMENTATION_PLAN.md` for the full phased plan.
 
@@ -114,7 +115,8 @@ organisation starts with zeros.
 Screens: sign in / register, Dashboard (KPIs + daily demand chart, 7/30/90
 days), Inventory (search, store and low-stock filters, detail with
 replenishment settings), Movements (ledger + record in/out/adjust), Catalogue
-(products, stores, categories, suppliers). Write actions are only shown to
+(products, stores, categories, suppliers), Imports (upload a sales CSV, see
+history and a per-line problem report). Write actions are only shown to
 `manager` and above; the backend enforces the same rule. Access tokens are
 refreshed automatically on a 401. When the server is unreachable, the last
 successfully loaded dashboard and first inventory page are shown with an
@@ -162,6 +164,9 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `GET/PATCH` | `/api/v1/inventory` | Inventory list/get/settings |
 | `GET/POST` | `/api/v1/movements` | Stock movements (transactional) |
 | `GET` | `/api/v1/analytics/dashboard` | Dashboard metrics from stored data |
+| `POST` | `/api/v1/imports` | Upload a sales CSV (multipart); returns the batch report |
+| `GET` | `/api/v1/imports`, `/api/v1/imports/{id}` | Import history and per-row errors |
+| `GET` | `/api/v1/imports/template` | CSV header + example row from your catalogue |
 
 All errors share one envelope:
 

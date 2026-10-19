@@ -144,3 +144,60 @@ All numbers are computed from stored data: inventory value, SKU/store counts,
 low-stock and stockout counts, pending purchase-order count, and a daily demand
 trend. Empty organisations return zeros, not placeholders. `is_demo` is true
 only when the organisation was created by the seed script.
+
+## Imports (sales history CSV)
+
+Uploading requires `manager` or above; reading requires any role.
+
+### `POST /api/v1/imports`
+`multipart/form-data` with one field `file`. Columns (header names are
+case-insensitive, order does not matter, extra columns are ignored):
+
+| Column | Rules |
+|--------|-------|
+| `sku` | Must match an existing product SKU in the organisation (exact match) |
+| `store` | Must match an existing store name (case-insensitive) |
+| `sale_date` | ISO `YYYY-MM-DD`, not in the future |
+| `quantity` | Number >= 0, at most 3 decimal places |
+
+Limits: 5 MB, 50,000 data rows, UTF-8 (a BOM is accepted). Blank lines are
+skipped.
+
+The natural key is `(org, product, store, sale_date)`. A row whose key already
+exists in stored sales history, or appeared earlier in the same file, is a
+**duplicate**: it is reported and the stored value is not changed. Every upload
+records a batch (response `201`) and the batch's valid rows are inserted in the
+same transaction - all of them or none.
+
+| `status` | Meaning |
+|----------|---------|
+| `completed` | Every row was imported |
+| `partial` | Some rows imported; others invalid or duplicate |
+| `failed` | Nothing imported (file-level problem, or no valid rows) |
+
+```json
+{
+  "id": "...", "filename": "sales.csv", "status": "partial",
+  "total_rows": 4, "valid_rows": 2, "invalid_rows": 1, "duplicate_rows": 1,
+  "error_count": 2, "errors_truncated": false, "created_at": "...",
+  "errors": [
+    {"row": 3, "column": "sku", "value": "NOPE", "message": "Unknown SKU for this organisation.", "kind": "invalid"},
+    {"row": 4, "column": "sale_date", "value": "2026-10-18", "message": "Same SKU, store and date as row 2 in this file.", "kind": "duplicate"}
+  ]
+}
+```
+
+`row` is the 1-based data row (file line = `row + 1`). File-level problems
+(missing columns, not UTF-8, empty, too large) have `row: null` and
+`kind: "file"`. Counts are always exact; the stored `errors` list is capped at
+1,000 entries and `errors_truncated` says when more exist.
+
+### `GET /api/v1/imports?limit=50&offset=0`
+Import history, newest first, without the `errors` list.
+
+### `GET /api/v1/imports/{id}`
+One batch including its error report. Another organisation's batch returns `404`.
+
+### `GET /api/v1/imports/template`
+`text/csv` header plus one example row using the organisation's own first SKU
+and store with quantity `0` (header only when the catalogue is empty).

@@ -7,6 +7,8 @@ import '../modules/auth/auth_views.dart';
 import '../modules/auth/splash_view.dart';
 import '../modules/catalog/catalog_controllers.dart';
 import '../modules/dashboard/dashboard_controller.dart';
+import '../modules/imports/imports_controller.dart';
+import '../modules/imports/imports_view.dart';
 import '../modules/inventory/inventory_controller.dart';
 import '../modules/inventory/inventory_detail_view.dart';
 import '../modules/movements/movements_controller.dart';
@@ -41,6 +43,7 @@ class HomeBinding extends Bindings {
     Get.lazyPut(() => StoresController(Get.find()));
     Get.lazyPut(() => CategoriesController(Get.find()));
     Get.lazyPut(() => SuppliersController(Get.find()));
+    Get.lazyPut(() => ImportsController(Get.find(), Get.find()));
   }
 }
 
@@ -50,6 +53,13 @@ class InventoryDetailBinding extends Bindings {
     Get.lazyPut(
       () => InventoryDetailController(Get.find(), Get.arguments as String),
     );
+  }
+}
+
+class ImportDetailBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut(() => ImportDetailController(Get.find(), Get.arguments as String));
   }
 }
 
@@ -92,6 +102,12 @@ abstract class AppPages {
       name: Routes.movementForm,
       page: () => const MovementFormView(),
       binding: MovementFormBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: Routes.importDetail,
+      page: () => const ImportDetailView(),
+      binding: ImportDetailBinding(),
       middlewares: [AuthMiddleware()],
     ),
   ];

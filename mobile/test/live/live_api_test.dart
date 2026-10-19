@@ -8,7 +8,9 @@
 library;
 
 import 'dart:io';
+import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,10 +20,12 @@ import 'package:smartstock/core/network/api_exception.dart';
 import 'package:smartstock/core/storage/cache_store.dart';
 import 'package:smartstock/core/storage/token_storage.dart';
 import 'package:smartstock/data/models/catalog_models.dart';
+import 'package:smartstock/data/models/import_models.dart';
 import 'package:smartstock/data/models/inventory_models.dart';
 import 'package:smartstock/data/repositories/analytics_repository.dart';
 import 'package:smartstock/data/repositories/auth_repository.dart';
 import 'package:smartstock/data/repositories/catalog_repository.dart';
+import 'package:smartstock/data/repositories/import_repository.dart';
 import 'package:smartstock/data/repositories/inventory_repository.dart';
 
 class _Client {
@@ -32,6 +36,7 @@ class _Client {
     catalog = ApiCatalogRepository(api);
     inventory = ApiInventoryRepository(api, InMemoryCacheStore());
     analytics = ApiAnalyticsRepository(api, InMemoryCacheStore());
+    imports = ApiImportRepository(api);
   }
 
   late final AppConfig config;
@@ -41,6 +46,7 @@ class _Client {
   late final CatalogRepository catalog;
   late final InventoryRepository inventory;
   late final AnalyticsRepository analytics;
+  late final ImportRepository imports;
 }
 
 void main() {
@@ -195,6 +201,58 @@ void main() {
         throwsA(isA<ApiException>()
             .having((e) => e.kind, 'kind', ApiErrorKind.conflict)),
       );
+    });
+
+    test('CSV import validates, de-duplicates and feeds the dashboard', () async {
+      final fresh = _Client(baseUrl!);
+      final slug = 'imp-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
+      await fresh.auth.register(
+        organizationName: 'Import Test $slug',
+        organizationSlug: slug,
+        email: 'owner@$slug.com',
+        password: 'password-123',
+      );
+      await fresh.catalog.createStore(name: 'HQ');
+      await fresh.catalog.createProduct(const ProductInput(
+        sku: 'IMP-1', name: 'Imported', unit: 'unit',
+        unitCost: '1', unitPrice: '2', isActive: true,
+      ));
+      String day(int ago) => DateTime.now()
+          .subtract(Duration(days: ago))
+          .toIso8601String()
+          .substring(0, 10);
+      Uint8List csv(String text) => Uint8List.fromList(utf8.encode(text));
+
+      final first = await fresh.imports.uploadSalesCsv(
+        filename: 'week.csv',
+        bytes: csv('sku,store,sale_date,quantity\n'
+            'IMP-1,HQ,${day(2)},4\n'
+            'IMP-1,hq,${day(1)},6\n'
+            'IMP-1,HQ,${day(1)},9\n'
+            'NOPE,HQ,${day(1)},1\n'),
+      );
+      expect(first.status, ImportStatus.partial);
+      expect((first.totalRows, first.validRows, first.invalidRows, first.duplicateRows),
+          (4, 2, 1, 1));
+      expect(first.errors.map((e) => e.row), containsAll([3, 4]));
+
+      final dash = (await fresh.analytics.getDashboard(trendDays: 7)).value;
+      final total = dash.demandTrend.fold<double>(0, (s, p) => s + p.quantity);
+      expect(total, 10);
+
+      final again = await fresh.imports.uploadSalesCsv(
+        filename: 'week.csv',
+        bytes: csv('sku,store,sale_date,quantity\nIMP-1,HQ,${day(2)},4\n'),
+      );
+      expect(again.status, ImportStatus.failed);
+      expect(again.duplicateRows, 1);
+
+      final history = await fresh.imports.listImports();
+      expect(history.items.map((b) => b.id), [again.id, first.id]);
+      final detail = await fresh.imports.getImport(first.id);
+      expect(detail.errors, hasLength(2));
+      expect(await fresh.imports.downloadTemplate(),
+          startsWith('sku,store,sale_date,quantity\nIMP-1,HQ,'));
     });
   });
 }

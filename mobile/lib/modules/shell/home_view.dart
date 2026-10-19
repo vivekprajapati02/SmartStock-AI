@@ -7,6 +7,7 @@ import '../../routes/app_routes.dart';
 import '../../widgets/common.dart';
 import '../catalog/catalog_view.dart';
 import '../dashboard/dashboard_view.dart';
+import '../imports/imports_view.dart';
 import '../inventory/inventory_view.dart';
 import '../movements/movements_view.dart';
 
@@ -27,6 +28,7 @@ const _destinations = [
   _Destination('Inventory', Icons.inventory_2_outlined, Icons.inventory_2),
   _Destination('Movements', Icons.swap_vert, Icons.swap_vert_circle),
   _Destination('Catalogue', Icons.category_outlined, Icons.category),
+  _Destination('Imports', Icons.upload_file_outlined, Icons.upload_file),
 ];
 
 /// Responsive app shell: bottom navigation on phones, a rail on wider screens.
@@ -41,8 +43,10 @@ class HomeView extends StatelessWidget {
         return const InventoryView();
       case 2:
         return const MovementsView();
-      default:
+      case 3:
         return const CatalogView();
+      default:
+        return const ImportsView();
     }
   }
 

@@ -90,3 +90,32 @@ Map<String, dynamic> errorJson(String code, String message,
         'request_id': 'req-123',
       },
     };
+
+Map<String, dynamic> importJson({
+  String id = 'imp-1',
+  String status = 'partial',
+  int total = 4,
+  int valid = 2,
+  int invalid = 1,
+  int duplicate = 1,
+  List<Map<String, dynamic>>? errors,
+  bool truncated = false,
+}) =>
+    {
+      'id': id,
+      'org_id': 'org',
+      'filename': 'sales.csv',
+      'status': status,
+      'total_rows': total,
+      'valid_rows': valid,
+      'invalid_rows': invalid,
+      'duplicate_rows': duplicate,
+      'error_count': invalid + duplicate,
+      'created_at': '2026-10-19T10:00:00Z',
+      'errors': errors ??
+          [
+            {'row': 2, 'column': 'sku', 'value': 'NOPE', 'message': 'Unknown SKU for this organisation.', 'kind': 'invalid'},
+            {'row': 4, 'column': 'sale_date', 'value': '2026-10-01', 'message': 'Same SKU, store and date as row 3 in this file.', 'kind': 'duplicate'},
+          ],
+      'errors_truncated': truncated,
+    };

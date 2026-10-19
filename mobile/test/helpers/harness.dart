@@ -8,6 +8,7 @@ import 'package:smartstock/data/models/auth_models.dart';
 import 'package:smartstock/data/repositories/analytics_repository.dart';
 import 'package:smartstock/data/repositories/auth_repository.dart';
 import 'package:smartstock/data/repositories/catalog_repository.dart';
+import 'package:smartstock/data/repositories/import_repository.dart';
 import 'package:smartstock/data/repositories/inventory_repository.dart';
 
 import 'fake_adapter.dart';
@@ -29,6 +30,7 @@ class Harness {
     catalog = ApiCatalogRepository(api);
     inventory = ApiInventoryRepository(api, cache);
     analytics = ApiAnalyticsRepository(api, cache);
+    imports = ApiImportRepository(api);
     session = SessionService(auth, cache);
   }
 
@@ -40,6 +42,7 @@ class Harness {
   late final CatalogRepository catalog;
   late final InventoryRepository inventory;
   late final AnalyticsRepository analytics;
+  late final ImportRepository imports;
   late final SessionService session;
 
   /// Registers repositories and a signed-in session in GetX.
@@ -49,6 +52,7 @@ class Harness {
     Get.put<CatalogRepository>(catalog);
     Get.put<InventoryRepository>(inventory);
     Get.put<AnalyticsRepository>(analytics);
+    Get.put<ImportRepository>(imports);
     Get.put<CacheStore>(cache);
     Get.put<SessionService>(session);
     session.setUser(User.fromJson(userJson(role: role)));

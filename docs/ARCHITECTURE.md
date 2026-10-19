@@ -55,6 +55,18 @@ movement and updating the inventory row, or receiving a purchase order) execute
 inside a single transaction so a failure rolls everything back. `tests/integration/test_postgres_transactions.py`
 asserts complete rollback after an injected failure.
 
+## CSV import
+
+`app/services/import_service.py` parses the upload with the standard `csv`
+module, validates each row with the `SalesRowIn` Pydantic model, resolves SKU
+and store against the organisation's catalogue, and checks the natural key
+`(org, product, store, sale_date)` against stored history and earlier rows in
+the same file. The `import_batches` record and all valid `sales_history` rows
+are committed together. If the commit hits the unique constraint (a concurrent
+import), everything is rolled back and a `failed` batch is recorded instead, so
+an import is never half-applied. Imported sales feed the dashboard demand trend
+and, from Phase 5, forecasting.
+
 ## Data model
 
 | Table | Purpose |

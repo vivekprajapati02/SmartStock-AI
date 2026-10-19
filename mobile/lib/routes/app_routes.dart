@@ -5,4 +5,5 @@ abstract class Routes {
   static const home = '/home';
   static const inventoryDetail = '/inventory/detail';
   static const movementForm = '/movements/new';
+  static const importDetail = '/imports/detail';
 }
