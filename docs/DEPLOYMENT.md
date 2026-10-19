@@ -80,8 +80,35 @@ Desktop and mobile builds do not use the proxy; build them with
 `--dart-define=API_BASE_URL=https://api.example.com` and add that client origin
 to `CORS_ORIGINS` only if it is a browser.
 
-## Notes for later phases
+## Database role (required for tenant isolation)
 
-CI/CD (GitHub Actions with a PostgreSQL service, plus Flutter analyze/test) is
-scheduled for Phase 7. CSV import, forecasting and purchase orders arrive in
-Phases 4-6.
+PostgreSQL superusers, and roles with `BYPASSRLS`, ignore row-level security
+even when tables use `FORCE ROW LEVEL SECURITY`. The API must therefore
+connect as an ordinary role that owns the application database:
+
+```sql
+CREATE ROLE smartstock LOGIN PASSWORD '...' NOSUPERUSER NOBYPASSRLS;
+CREATE DATABASE smartstock OWNER smartstock;
+```
+
+`docker-compose.yml` does this through `backend/docker/initdb/01-app-role.sql`,
+which the official image runs on first start; the `postgres` superuser is only
+for maintenance. Init scripts run only on an **empty** volume, so recreate an
+older volume once with `docker compose down -v` (this deletes its data).
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on pushes to `main` and on pull requests:
+
+| Job | Steps |
+|-----|-------|
+| Backend (Python 3.11 and 3.14) | PostgreSQL 15 service with a non-superuser app role; `ruff check`; `pytest` including the PostgreSQL RLS, transaction and workflow integration tests; `alembic upgrade head` plus a seed smoke test |
+| Flutter | `flutter analyze`, `flutter test`, `flutter build web` (Flutter 3.47.4) |
+| Docker images | Builds the API and web images (no push), after both test jobs pass |
+
+## Resource notes
+
+Backtests and forecast generation train models inside the request: about 4-6
+seconds for the 30-series demo dataset. The Flutter client allows up to 3
+minutes for these calls. Much larger catalogues would need a background
+worker.

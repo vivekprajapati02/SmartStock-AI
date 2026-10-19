@@ -1,6 +1,6 @@
 # SmartStock AI - Implementation Plan
 
-Status: **Phases 1-6 complete; Phase 7 (hardening, CI) next**
+Status: **All phases (1-7) implemented** - see Section 15 for delivery and verification status
 Author: AI Coding Agent
 Last updated: 2026-10-15
 
@@ -276,7 +276,7 @@ possible; RLS- and Postgres-specific behavior is exercised only against Postgres
 
 | Phase | Scope | Primary deliverables | Verification |
 |-------|-------|----------------------|--------------|
-| 1 (now) | Repo inspection + plan | this document | Review/approval |
+| 1 | Repo inspection + plan | this document | Review/approval |
 | 2 | Backend foundation | app skeleton, config, ORM models, Alembic migration, auth+RBAC, tenant isolation, synthetic seed, docker-compose, baseline tests | `pytest`, app boots, migration applies |
 | 3 | Flutter core | app skeleton, Dio client, GetX routing/DI, Dashboard + Inventory screens on real APIs, async/offline states | `flutter analyze`/`test` (toolchain permitting) |
 | 4 | CSV import | upload, validation, duplicate detection, error reports, UI | import tests + API tests |
@@ -292,7 +292,7 @@ possible; RLS- and Postgres-specific behavior is exercised only against Postgres
 - Run tests after each phase; fix failures before advancing.
 - Stop after each phase and report changed files, completed features, test
   results, and remaining tasks.
-- Never commit unless explicitly asked.
+- Never commit unless explicitly asked. (Standing instruction since Phase 3: commit each completed phase to `main` before starting the next.)
 
 ---
 
@@ -312,3 +312,19 @@ Flutter 3.47 / Dart 3.13 is now available in the development environment, so
 desktop/mobile builds need their platform toolchains (Visual Studio, Xcode,
 Android SDK) and are not verified locally yet; CI coverage comes in Phase 7.
 Section 1 records the original Phase 1 inspection and is kept for history.
+
+---
+
+## 15. Delivery Status
+
+| Phase | Commit scope | Verified locally | Not verified locally |
+|-------|--------------|------------------|----------------------|
+| 2 | Backend foundation | SQLite suite | PostgreSQL tests (no local server) |
+| 3 | Flutter client | analyze, tests, web build, Android debug APK, live API contract tests | iOS/macOS/Windows/Linux builds |
+| 4 | CSV import | API + Flutter tests, live import | PostgreSQL run |
+| 5 | Forecasting & evaluation | ML/API/Flutter tests, live backtest + generate | PostgreSQL run |
+| 6 | Replenishment, alerts, POs | API/Flutter tests incl. receipt rollback, live PO lifecycle | PostgreSQL row locks |
+| 7 | CI, Docker role fix, docs | CI workflow authored | CI not yet run (needs a push); Docker images not built locally (no Docker) |
+
+The PostgreSQL integration tests (`tests/integration/`), including the Phase
+4-6 workflows, run in CI against PostgreSQL 15 as a non-superuser role.

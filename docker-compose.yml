@@ -4,13 +4,17 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: smartstock
-      POSTGRES_PASSWORD: smartstock
-      POSTGRES_DB: smartstock
+      # Admin (superuser) account for maintenance only. The API connects as
+      # the non-superuser `smartstock` role created by docker/initdb, so
+      # row-level security is enforced.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-postgres-dev-only}
+      POSTGRES_DB: postgres
     ports:
       - "5432:5432"
     volumes:
       - smartstock_pgdata:/var/lib/postgresql/data
+      - ./backend/docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U smartstock -d smartstock"]
       interval: 5s

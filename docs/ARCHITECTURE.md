@@ -65,7 +65,7 @@ the same file. The `import_batches` record and all valid `sales_history` rows
 are committed together. If the commit hits the unique constraint (a concurrent
 import), everything is rolled back and a `failed` batch is recorded instead, so
 an import is never half-applied. Imported sales feed the dashboard demand trend
-and, from Phase 5, forecasting.
+and forecasting.
 
 ## Forecasting
 
@@ -118,6 +118,8 @@ tests can run on SQLite while production and integration tests use PostgreSQL.
 - Authentication failures return a single generic message to avoid leaking which
   credential was wrong.
 - Cross-tenant access is prevented at both the service and database layers.
+  The database layer only holds when the API connects as a role that is not a
+  superuser and lacks `BYPASSRLS`; Docker Compose and CI are set up that way.
 
 ## Flutter client
 

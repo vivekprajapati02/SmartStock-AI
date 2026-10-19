@@ -1,12 +1,14 @@
 # SmartStock AI
 
+[![CI](https://github.com/vivekprajapati02/SmartStock-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/vivekprajapati02/SmartStock-AI/actions/workflows/ci.yml)
+
 AI-powered inventory and demand forecasting platform.
 
-- **Mobile / Web / Desktop client:** Flutter + GetX + Dio (Phase 3)
+- **Mobile / Web / Desktop client:** Flutter + GetX + Dio
 - **Backend:** Python + FastAPI + SQLAlchemy + Alembic + PostgreSQL
 - **ML:** pandas / NumPy / scikit-learn / LightGBM (see `docs/ML.md`)
 
-This repository currently contains **Phases 2 and 3**: the backend foundation
+All seven phases of `docs/IMPLEMENTATION_PLAN.md` are implemented: the backend foundation
 (schema, auth/RBAC, tenant isolation, synthetic demo data, Docker tooling) plus
 catalogue, inventory-movement and dashboard APIs, the Flutter client with
 Auth, Dashboard, Inventory, Movements and Catalogue screens on those real APIs,
@@ -43,7 +45,8 @@ mobile/           # Flutter client (Android, iOS, web, Windows, macOS, Linux)
     widgets/      # shared loading/error/empty/offline view, KPI cards, lists
   test/           # unit, controller, widget and live API contract tests
   Dockerfile      # web build served by nginx with /api reverse proxy
-docker-compose.yml
+docker-compose.yml   # postgres (non-superuser app role) + api + web
+.github/workflows/ci.yml
 docs/
 ```
 
@@ -84,7 +87,8 @@ The API is then available at http://localhost:8000 with interactive docs at
 docker compose up --build
 ```
 
-This starts PostgreSQL, the API (migrations run automatically on startup) on
+This starts PostgreSQL (the API connects as a non-superuser role so row-level
+security applies; see `docs/DEPLOYMENT.md`), the API (migrations run automatically on startup) on
 http://localhost:8000, and the Flutter web client on http://localhost:8080.
 nginx in the web container proxies `/api` and `/health` to the API, so the
 browser uses a single origin.
@@ -239,6 +243,12 @@ TEST_DATABASE_URL=postgresql+psycopg2://smartstock:smartstock@localhost:5432/sma
 .venv/bin/ruff check app seed tests
 ```
 
+The PostgreSQL integration tests must connect as a **non-superuser** role
+(superusers bypass row-level security). `createuser` without `-s` creates one.
+CI (`.github/workflows/ci.yml`) runs lint and the full suite, including
+PostgreSQL, on Python 3.11 and 3.14, then Flutter analyze/test/web build and
+both Docker image builds.
+
 Flutter:
 
 ```bash
@@ -252,7 +262,7 @@ LIVE_API_URL=http://localhost:8000 flutter test test/live
 
 ## Documentation
 
-- `docs/IMPLEMENTATION_PLAN.md` — phased plan and decisions
+- `docs/IMPLEMENTATION_PLAN.md` — phased plan, decisions and delivery status
 - `docs/ARCHITECTURE.md` — backend architecture and data model
 - `docs/API.md` — endpoint reference
 - `docs/ML.md` — forecasting models, backtesting, metrics and limitations
