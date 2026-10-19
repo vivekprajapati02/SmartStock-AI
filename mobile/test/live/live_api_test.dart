@@ -28,6 +28,8 @@ import 'package:smartstock/data/repositories/catalog_repository.dart';
 import 'package:smartstock/data/repositories/forecast_repository.dart';
 import 'package:smartstock/data/repositories/import_repository.dart';
 import 'package:smartstock/data/repositories/inventory_repository.dart';
+import 'package:smartstock/data/repositories/planning_repository.dart';
+import 'package:smartstock/data/models/planning_models.dart';
 
 class _Client {
   _Client(String baseUrl) {
@@ -39,6 +41,7 @@ class _Client {
     analytics = ApiAnalyticsRepository(api, InMemoryCacheStore());
     imports = ApiImportRepository(api);
     forecasts = ApiForecastRepository(api);
+    planning = ApiPlanningRepository(api);
   }
 
   late final AppConfig config;
@@ -50,6 +53,7 @@ class _Client {
   late final AnalyticsRepository analytics;
   late final ImportRepository imports;
   late final ForecastRepository forecasts;
+  late final PlanningRepository planning;
 }
 
 void main() {
@@ -283,5 +287,54 @@ void main() {
       expect(series.history, hasLength(60));
       expect(series.forecast.first.day.isAfter(series.history.last.day), isTrue);
     }, timeout: const Timeout(Duration(minutes: 3)));
+
+    test('purchase order receipt updates stock; alerts and replenishment run', () async {
+      final fresh = _Client(baseUrl!);
+      final slug = 'po-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
+      await fresh.auth.register(
+        organizationName: 'PO Test $slug',
+        organizationSlug: slug,
+        email: 'owner@$slug.com',
+        password: 'password-123',
+      );
+      final store = await fresh.catalog.createStore(name: 'HQ');
+      final supplier = await fresh.catalog.createSupplier(name: 'Vendor', leadTimeDays: 3);
+      final product = await fresh.catalog.createProduct(ProductInput(
+        sku: 'PO-1', name: 'Boxed', supplierId: supplier.id, unit: 'unit',
+        unitCost: '4', unitPrice: '9', isActive: true,
+      ));
+      var po = await fresh.planning.createPurchaseOrder(
+        supplierId: supplier.id,
+        storeId: store.id,
+        reference: 'LIVE-PO',
+        lines: [POLineInput(product.id, '10')],
+      );
+      expect(po.status, POStatus.draft);
+      expect(po.estimatedCost, 40);
+      po = await fresh.planning.transition(po.id, 'submit');
+      po = await fresh.planning.transition(po.id, 'approve');
+      expect(po.status, POStatus.approved);
+
+      await expectLater(
+        fresh.planning.receive(po.id, {po.items.single.id: '11'}),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 422)),
+      );
+      po = await fresh.planning.receive(po.id, {po.items.single.id: '6'});
+      expect(po.status, POStatus.partial);
+      final stock = (await fresh.inventory.listInventory(const InventoryQuery())).value;
+      expect(stock.items.single.quantityOnHand, 6);
+      final ledger = await fresh.inventory.listMovements();
+      expect(ledger.items.single.reference, 'LIVE-PO');
+
+      final repl = await fresh.planning.replenishment();
+      expect(repl.items.single.onOrder, 4);
+      expect(repl.items.single.demandSource, 'none');
+
+      final evaluation = await fresh.planning.evaluateAlerts();
+      expect(evaluation.openTotal, 0); // no sales yet -> no demand-based alerts
+      final demo = await c.planning.evaluateAlerts();
+      final alerts = await c.planning.alerts(status: null, limit: 200);
+      expect(alerts.total, greaterThanOrEqualTo(demo.openTotal));
+    });
   });
 }

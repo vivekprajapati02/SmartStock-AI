@@ -14,6 +14,8 @@ import '../modules/inventory/inventory_controller.dart';
 import '../modules/inventory/inventory_detail_view.dart';
 import '../modules/movements/movements_controller.dart';
 import '../modules/movements/movements_view.dart';
+import '../modules/planning/planning_controllers.dart';
+import '../modules/planning/planning_views.dart';
 import '../modules/shell/home_view.dart';
 import 'app_routes.dart';
 
@@ -47,6 +49,9 @@ class HomeBinding extends Bindings {
     Get.lazyPut(() => ImportsController(Get.find(), Get.find()));
     Get.lazyPut(() => ForecastController(Get.find(), Get.find()));
     Get.lazyPut(() => EvaluationController(Get.find()));
+    Get.lazyPut(() => AlertsController(Get.find()));
+    Get.lazyPut(() => ReplenishmentController(Get.find(), Get.find()));
+    Get.lazyPut(() => PurchaseOrdersController(Get.find()));
   }
 }
 
@@ -63,6 +68,20 @@ class ImportDetailBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut(() => ImportDetailController(Get.find(), Get.arguments as String));
+  }
+}
+
+class PODetailBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut(() => PODetailController(Get.find(), Get.arguments as String));
+  }
+}
+
+class POFormBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut(() => POFormController(Get.find(), Get.find()));
   }
 }
 
@@ -111,6 +130,18 @@ abstract class AppPages {
       name: Routes.importDetail,
       page: () => const ImportDetailView(),
       binding: ImportDetailBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: Routes.purchaseOrderDetail,
+      page: () => const PODetailView(),
+      binding: PODetailBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: Routes.purchaseOrderForm,
+      page: () => const POFormView(),
+      binding: POFormBinding(),
       middlewares: [AuthMiddleware()],
     ),
   ];

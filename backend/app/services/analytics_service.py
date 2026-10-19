@@ -10,8 +10,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.session import set_org_context
+from app.models.alert import Alert
 from app.models.catalog import Store
-from app.models.enums import PurchaseOrderStatus
+from app.models.enums import AlertStatus, PurchaseOrderStatus
 from app.models.inventory import Inventory, SalesHistory
 from app.models.organization import Organization
 from app.models.product import Product
@@ -76,6 +77,14 @@ def get_dashboard(db: Session, *, org_id: uuid.UUID, trend_days: int = 30) -> Da
         ).scalar_one()
     )
 
+    open_alert_count = int(
+        db.execute(
+            select(func.count())
+            .select_from(Alert)
+            .where(Alert.org_id == org_id, Alert.status == AlertStatus.OPEN)
+        ).scalar_one()
+    )
+
     end = date.today()
     start = end - timedelta(days=trend_days - 1)
     rows = db.execute(
@@ -101,6 +110,7 @@ def get_dashboard(db: Session, *, org_id: uuid.UUID, trend_days: int = 30) -> Da
         low_stock_count=low_stock_count,
         stockout_count=stockout_count,
         pending_order_count=pending_order_count,
+        open_alert_count=open_alert_count,
         demand_trend=demand_trend,
         is_demo=is_demo,
     )

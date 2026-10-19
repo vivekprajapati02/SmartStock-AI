@@ -11,6 +11,7 @@ import 'package:smartstock/data/repositories/catalog_repository.dart';
 import 'package:smartstock/data/repositories/forecast_repository.dart';
 import 'package:smartstock/data/repositories/import_repository.dart';
 import 'package:smartstock/data/repositories/inventory_repository.dart';
+import 'package:smartstock/data/repositories/planning_repository.dart';
 
 import 'fake_adapter.dart';
 import 'fixtures.dart';
@@ -33,6 +34,7 @@ class Harness {
     analytics = ApiAnalyticsRepository(api, cache);
     imports = ApiImportRepository(api);
     forecasts = ApiForecastRepository(api);
+    planning = ApiPlanningRepository(api);
     session = SessionService(auth, cache);
   }
 
@@ -46,6 +48,7 @@ class Harness {
   late final AnalyticsRepository analytics;
   late final ImportRepository imports;
   late final ForecastRepository forecasts;
+  late final PlanningRepository planning;
   late final SessionService session;
 
   /// Registers repositories and a signed-in session in GetX.
@@ -57,6 +60,7 @@ class Harness {
     Get.put<AnalyticsRepository>(analytics);
     Get.put<ImportRepository>(imports);
     Get.put<ForecastRepository>(forecasts);
+    Get.put<PlanningRepository>(planning);
     Get.put<CacheStore>(cache);
     Get.put<SessionService>(session);
     session.setUser(User.fromJson(userJson(role: role)));

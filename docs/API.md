@@ -142,7 +142,8 @@ Cross-org access returns `404`.
 
 All numbers are computed from stored data: inventory value, SKU/store counts,
 low-stock and stockout counts, pending purchase-order count, and a daily demand
-trend. Empty organisations return zeros, not placeholders. `is_demo` is true
+trend, plus `open_alert_count`. Empty organisations return zeros, not
+placeholders. `is_demo` is true
 only when the organisation was created by the seed script.
 
 ## Imports (sales history CSV)
@@ -254,3 +255,74 @@ Points from the latest forecast run: `{"run": {...} | null, "items": [{"product_
 Recent actual daily sales (zero-filled) plus the stored forecast for one
 SKU/store: `{"run", "history": [{"day", "quantity"}], "forecast": [...]}`.
 Another organisation's product or store returns `404`.
+
+## Replenishment
+
+### `GET /api/v1/replenishment?store_id=&needs_reorder=&service_level=0.95&review_days=7&limit=&offset=`
+One row per SKU/store, items needing reorder first. Every input is returned so
+the recommendation can be traced:
+
+| Field | Meaning |
+|-------|---------|
+| `avg_daily_demand`, `demand_std` | From the last 56 days of stored sales (zero-filled); mean is replaced by the stored forecast when one covers lead time + review |
+| `demand_source` | `forecast` (with `forecast_model`), `history`, or `none` (no sales data at all) |
+| `safety_stock` | z(service level) x demand_std x sqrt(lead_time_days) |
+| `lead_time_demand`, `reorder_point` | Demand over the lead time; reorder point = that + safety stock |
+| `target_stock` | Demand over lead time + review period + safety stock |
+| `on_order`, `inventory_position` | Open (pending/approved/partial) PO quantities not yet received; position = on hand + on order |
+| `recommended_qty` | ceil(target - position) when position <= reorder point, else 0 |
+| `current_reorder_point`, `current_safety_stock` | The values saved on the inventory row |
+
+The list response also carries `service_level`, `z_score`, `review_days`,
+`history_days` and `history_end`.
+
+### `POST /api/v1/replenishment/apply` (manager+)
+`{"store_id"?: "...", "inventory_ids"?: [...], "service_level"?: 0.95, "review_days"?: 7}`
+saves the computed reorder point and safety stock onto the inventory rows,
+returning `{"updated": n}`.
+
+## Alerts
+
+### `POST /api/v1/alerts:evaluate` (manager+)
+Checks every SKU/store and returns `{"created", "updated", "resolved", "open_total", "evaluated_items"}`.
+
+| Type | Condition | Severity |
+|------|-----------|----------|
+| `low_stock` | 0 < on hand <= saved reorder point | `high` if on hand <= saved safety stock, else `medium` |
+| `stockout_risk` | demand > 0 and on hand + on order < lead-time demand | `critical` if on hand is 0, else `high` |
+| `overstock` | demand > 0 and days of cover > max(60, 3 x (lead + review)) | `medium` if more than twice that, else `low` |
+| `slow_moving` | on hand > 0, no sales in the last 30 days while the organisation has recent sales | `low` |
+
+There is one non-resolved alert per (product, store, type). Open and
+acknowledged alerts are updated while their condition holds and resolved
+automatically when it clears. Dismissed alerts are not re-opened while their
+condition persists.
+
+### `GET /api/v1/alerts?status=&alert_type=&severity=&store_id=&limit=&offset=`
+Most severe first, then newest.
+
+### `PATCH /api/v1/alerts/{id}` (manager+)
+`{"status": "acknowledged" | "resolved" | "dismissed"}`.
+
+## Purchase orders
+
+Lifecycle: `draft` -> (`submit`) `pending` -> (`approve`, **admin/owner only**)
+`approved` -> (`receive`) `partial` -> `received`. `cancel` is allowed from
+`draft`, `pending` and `approved`. An action from any other status returns
+`409`.
+
+| Endpoint | Notes |
+|----------|-------|
+| `POST /api/v1/purchase-orders` | `{"supplier_id", "store_id", "reference"?, "expected_date"?, "items": [{"product_id", "quantity_ordered"}]}`; each product at most once; quantities > 0 |
+| `GET /api/v1/purchase-orders?status=&supplier_id=&store_id=` | Summaries with `line_count`, `total_ordered`, `total_received`, `estimated_cost` (ordered x current unit cost) |
+| `GET /api/v1/purchase-orders/{id}` | Includes `items` with `quantity_remaining` |
+| `PATCH /api/v1/purchase-orders/{id}` | Draft only; `items` replaces all lines |
+| `POST /api/v1/purchase-orders/{id}/submit` \| `approve` \| `cancel` | Status transitions |
+| `POST /api/v1/purchase-orders/{id}/receive` | `{"lines": [{"item_id", "quantity"}], "note"?}` |
+| `POST /api/v1/purchase-orders/from-recommendations` | `{"store_id"}` -> one draft per supplier for the store's `recommended_qty`; products without a supplier are listed in `skipped` |
+
+A receipt writes one `in` stock movement per line (reference = the PO
+reference or `PO-<id prefix>`), increases on-hand stock, and updates line and
+order status, all in a single transaction. If any line is invalid (not on
+this order, or more than the remaining quantity), the whole receipt is
+rejected with `422` and nothing changes.

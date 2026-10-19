@@ -12,8 +12,9 @@ catalogue, inventory-movement and dashboard APIs, the Flutter client with
 Auth, Dashboard, Inventory, Movements and Catalogue screens on those real APIs,
 (Phase 4) sales-history CSV import with validation, duplicate detection and
 per-row error reports, and (Phase 5) demand forecasting with baselines and
-LightGBM evaluated by chronological backtesting. Alerts, replenishment and
-purchase orders are Phase 6.
+LightGBM evaluated by chronological backtesting, and (Phase 6) replenishment
+recommendations, rule-based stock alerts and purchase orders with
+transactional partial receipts.
 
 See `docs/IMPLEMENTATION_PLAN.md` for the full phased plan.
 
@@ -120,8 +121,13 @@ replenishment settings), Movements (ledger + record in/out/adjust), Catalogue
 (products, stores, categories, suppliers), Imports (upload a sales CSV, see
 history and a per-line problem report), Forecasts (actual sales and the stored
 forecast for any SKU/store), Model evaluation (stored backtest metrics per
-model, which model was selected and why, forecast vs actual). Write actions are only shown to
-`manager` and above; the backend enforces the same rule. Access tokens are
+model, which model was selected and why, forecast vs actual), Alerts (check
+stock now; acknowledge/resolve/dismiss), Replenishment (recommended order
+quantities with every input shown; save as stock settings; draft purchase
+orders per supplier), Purchase orders (create, submit, approve, receive
+deliveries partially). Write actions are only shown to
+`manager` and above, and purchase-order approval only to `admin`/`owner`;
+the backend enforces the same rules. Access tokens are
 refreshed automatically on a 401. When the server is unreachable, the last
 successfully loaded dashboard and first inventory page are shown with an
 "Offline - showing data saved ..." banner; nothing is invented.
@@ -175,6 +181,9 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `GET` | `/api/v1/models/comparison`, `/api/v1/models/runs` | Stored backtest metrics and run history |
 | `POST` | `/api/v1/forecasts:generate` | Forecast every SKU/store with the selected model |
 | `GET` | `/api/v1/forecasts`, `/api/v1/forecasts/series` | Stored forecasts; history + forecast for one SKU/store |
+| `GET/POST` | `/api/v1/replenishment`, `/api/v1/replenishment/apply` | Reorder point, safety stock, target, recommended qty |
+| `GET/POST/PATCH` | `/api/v1/alerts`, `/api/v1/alerts:evaluate`, `/api/v1/alerts/{id}` | Low stock, stockout risk, overstock, slow moving |
+| `GET/POST/PATCH` | `/api/v1/purchase-orders[...]` | Draft, submit, approve (admin+), cancel, partial receive |
 
 All errors share one envelope:
 

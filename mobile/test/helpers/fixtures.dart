@@ -160,3 +160,33 @@ Map<String, dynamic> comparisonJson({bool empty = false, bool demo = true, Strin
         ],
         'is_demo': demo,
       };
+
+Map<String, dynamic> alertJson({String id = 'a1', String type = 'stockout_risk', String severity = 'critical', String status = 'open'}) => {
+      'id': id, 'product_id': 'p1', 'store_id': 's1', 'sku': 'SKU-1', 'product_name': 'Widget',
+      'store_name': 'Main', 'alert_type': type, 'severity': severity, 'status': status,
+      'message': 'On hand 0 + on order 0 is below expected demand of 35 over the 7-day lead time.',
+      'created_at': '2026-10-19T10:00:00Z', 'updated_at': '2026-10-19T10:00:00Z',
+    };
+
+Map<String, dynamic> replenishmentJson({bool reorder = true, String source = 'forecast'}) => {
+      'inventory_id': 'inv-1', 'product_id': 'p1', 'store_id': 's1', 'sku': 'SKU-1',
+      'product_name': 'Widget', 'store_name': 'Main', 'supplier_id': 'sup-1', 'supplier_name': 'Acme Supply',
+      'on_hand': 10.0, 'on_order': 5.0, 'inventory_position': 15.0, 'lead_time_days': 7, 'review_days': 7,
+      'avg_daily_demand': 5.0, 'demand_std': 1.009, 'demand_source': source,
+      'forecast_model': source == 'forecast' ? 'lightgbm' : null,
+      'lead_time_demand': 35.0, 'safety_stock': 4.391, 'reorder_point': 39.391, 'target_stock': 74.391,
+      'recommended_qty': reorder ? 60.0 : 0.0, 'days_of_cover': 2.0, 'needs_reorder': reorder,
+      'current_reorder_point': 0.0, 'current_safety_stock': 0.0,
+    };
+
+Map<String, dynamic> poJson({String status = 'approved', double received = 0}) => {
+      'id': 'po-12345678-aaaa', 'org_id': 'o', 'supplier_id': 'sup-1', 'supplier_name': 'Acme Supply',
+      'store_id': 's1', 'store_name': 'Main', 'status': status, 'reference': 'PO-1001',
+      'expected_date': null, 'created_by': 'u1', 'approved_by': status == 'draft' ? null : 'u1',
+      'line_count': 1, 'total_ordered': '10.000', 'total_received': '$received',
+      'estimated_cost': '25.00', 'created_at': '2026-10-19T10:00:00Z', 'updated_at': '2026-10-19T10:00:00Z',
+      'items': [
+        {'id': 'item-1', 'product_id': 'p1', 'sku': 'SKU-1', 'product_name': 'Widget', 'unit_cost': '2.50',
+         'quantity_ordered': '10.000', 'quantity_received': '$received', 'quantity_remaining': '${10 - received}'},
+      ],
+    };

@@ -15,6 +15,7 @@ import 'data/repositories/catalog_repository.dart';
 import 'data/repositories/forecast_repository.dart';
 import 'data/repositories/import_repository.dart';
 import 'data/repositories/inventory_repository.dart';
+import 'data/repositories/planning_repository.dart';
 import 'routes/app_pages.dart';
 import 'routes/app_routes.dart';
 
@@ -52,6 +53,7 @@ Future<void> initServices({
       ApiInventoryRepository(api, cacheStore), permanent: true);
   Get.put<ImportRepository>(ApiImportRepository(api), permanent: true);
   Get.put<ForecastRepository>(ApiForecastRepository(api), permanent: true);
+  Get.put<PlanningRepository>(ApiPlanningRepository(api), permanent: true);
   Get.put<CsvFilePicker>(PlatformCsvFilePicker(), permanent: true);
   Get.put<AnalyticsRepository>(
       ApiAnalyticsRepository(api, cacheStore), permanent: true);

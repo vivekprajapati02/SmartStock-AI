@@ -21,6 +21,7 @@ class Dashboard {
     required this.lowStockCount,
     required this.stockoutCount,
     required this.pendingOrderCount,
+    this.openAlertCount = 0,
     required this.demandTrend,
     required this.isDemo,
   });
@@ -32,6 +33,7 @@ class Dashboard {
         lowStockCount: parseInt(json['low_stock_count']),
         stockoutCount: parseInt(json['stockout_count']),
         pendingOrderCount: parseInt(json['pending_order_count']),
+        openAlertCount: parseInt(json['open_alert_count']),
         demandTrend: (json['demand_trend'] as List? ?? const [])
             .map((e) => DemandPoint.fromJson(e as Map<String, dynamic>))
             .toList(),
@@ -44,6 +46,7 @@ class Dashboard {
   final int lowStockCount;
   final int stockoutCount;
   final int pendingOrderCount;
+  final int openAlertCount;
   final List<DemandPoint> demandTrend;
   final bool isDemo;
 

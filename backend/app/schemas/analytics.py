@@ -20,5 +20,6 @@ class DashboardOut(APIModel):
     low_stock_count: int
     stockout_count: int
     pending_order_count: int
+    open_alert_count: int = 0
     demand_trend: list[DemandPoint]
     is_demo: bool = False

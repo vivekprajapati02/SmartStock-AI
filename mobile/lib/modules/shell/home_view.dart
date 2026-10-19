@@ -11,6 +11,7 @@ import '../forecasting/forecasting_views.dart';
 import '../imports/imports_view.dart';
 import '../inventory/inventory_view.dart';
 import '../movements/movements_view.dart';
+import '../planning/planning_views.dart';
 
 class HomeController extends GetxController {
   final RxInt tab = 0.obs;
@@ -47,6 +48,12 @@ final List<AppSection> appSections = [
       group: 'Planning'),
   AppSection('Model evaluation', Icons.fact_check_outlined, Icons.fact_check,
       () => const EvaluationView()),
+  AppSection('Alerts', Icons.notifications_outlined, Icons.notifications,
+      () => const AlertsView()),
+  AppSection('Replenishment', Icons.shopping_cart_checkout_outlined,
+      Icons.shopping_cart_checkout, () => const ReplenishmentView()),
+  AppSection('Purchase orders', Icons.receipt_long_outlined, Icons.receipt_long,
+      () => const PurchaseOrdersView()),
 ];
 
 int sectionIndex(String label) => appSections.indexWhere((s) => s.label == label);

@@ -78,6 +78,18 @@ passes data up to each cutoff. `services/forecast_service.py` persists one
 and selects LightGBM only when it strictly beats the best baseline. Details in
 `docs/ML.md`.
 
+## Replenishment, alerts and purchasing
+
+`replenishment_service` derives reorder point, safety stock, target stock and
+recommended quantity per SKU/store from stored sales, the latest stored
+forecast and open purchase orders, computed on request and never cached.
+`alert_service` applies four rules on top of those numbers and de-duplicates
+alerts per (product, store, type). `purchase_order_service` owns the status
+machine; a receipt stages one stock movement per line through
+`inventory_service.apply_movement` (which locks the inventory row with
+`SELECT ... FOR UPDATE` on PostgreSQL) and commits them together with the line
+and order status, or rolls everything back.
+
 ## Data model
 
 | Table | Purpose |

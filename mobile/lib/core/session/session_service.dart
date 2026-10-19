@@ -17,6 +17,9 @@ class SessionService extends GetxService {
 
   bool get canWrite => user.value?.canWrite ?? false;
 
+  /// Purchase-order approval requires admin or owner.
+  bool get isAdmin => user.value?.role.atLeast(UserRole.admin) ?? false;
+
   void setUser(User value) => user.value = value;
 
   /// Loads the current user from stored tokens. Returns null if not signed in

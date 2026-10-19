@@ -30,6 +30,8 @@ def _get_or_create_inventory(
             Inventory.product_id == product_id,
             Inventory.store_id == store_id,
         )
+        # Row lock (PostgreSQL) so concurrent movements cannot lose updates.
+        .with_for_update()
     ).scalar_one_or_none()
     if row is not None:
         return row
@@ -136,6 +138,35 @@ def record_movement(
     note: str | None,
 ) -> tuple[StockMovement, Inventory]:
     """Write a stock movement and update on-hand quantity in one transaction."""
+    movement, inventory = apply_movement(
+        db,
+        org_id=org_id,
+        product_id=product_id,
+        store_id=store_id,
+        movement_type=movement_type,
+        quantity=quantity,
+        reference=reference,
+        note=note,
+    )
+    db.commit()
+    db.refresh(movement)
+    db.refresh(inventory)
+    return movement, inventory
+
+
+def apply_movement(
+    db: Session,
+    *,
+    org_id: uuid.UUID,
+    product_id: uuid.UUID,
+    store_id: uuid.UUID,
+    movement_type: MovementType,
+    quantity: Decimal,
+    reference: str | None,
+    note: str | None,
+) -> tuple[StockMovement, Inventory]:
+    """Stage a movement and the on-hand change without committing, so callers
+    (e.g. purchase-order receipts) can combine several in one transaction."""
     _ensure_org(db, org_id)
 
     product = db.get(Product, product_id)
@@ -175,9 +206,7 @@ def record_movement(
     )
     inventory.quantity_on_hand = inventory.quantity_on_hand + delta
     db.add(movement)
-    db.commit()
-    db.refresh(movement)
-    db.refresh(inventory)
+    db.flush()
     return movement, inventory
 
 

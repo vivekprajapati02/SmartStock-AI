@@ -90,6 +90,13 @@ class _DashboardBody extends StatelessWidget {
         value: number.format(d.pendingOrderCount),
         icon: Icons.local_shipping_outlined,
       ),
+      KpiCard(
+        key: const Key('kpi-open-alerts'),
+        label: 'Open alerts',
+        value: number.format(d.openAlertCount),
+        icon: Icons.notifications_active_outlined,
+        color: d.openAlertCount > 0 ? AppTheme.stockout : null,
+      ),
     ];
 
     return LayoutBuilder(builder: (context, constraints) {

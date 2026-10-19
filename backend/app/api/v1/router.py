@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.v1 import analytics, auth, imports, inventory, products, users
 from app.api.v1.catalog import categories_router, stores_router, suppliers_router
 from app.api.v1.forecasting import forecasts_router, models_router
+from app.api.v1.planning import alerts_router, po_router, replenishment_router
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -20,4 +21,7 @@ api_router.include_router(inventory.router)
 api_router.include_router(imports.router)
 api_router.include_router(forecasts_router)
 api_router.include_router(models_router)
+api_router.include_router(replenishment_router)
+api_router.include_router(alerts_router)
+api_router.include_router(po_router)
 api_router.include_router(analytics.router)
