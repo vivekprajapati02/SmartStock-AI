@@ -106,6 +106,29 @@ def test_adjust_and_list_movements(client):
     assert movements.json()["total"] == 2
 
 
+def test_movement_ledger_is_newest_first(client):
+    headers, store, product = _setup(client)
+    for movement_type, quantity in (("in", "10"), ("out", "3"), ("adjust", "-1")):
+        created = client.post(
+            "/api/v1/movements",
+            headers=headers,
+            json={
+                "product_id": product["id"],
+                "store_id": store["id"],
+                "movement_type": movement_type,
+                "quantity": quantity,
+            },
+        )
+        assert created.status_code == 201, created.text
+    items = client.get("/api/v1/movements", headers=headers).json()["items"]
+    assert [m["movement_type"] for m in items] == ["adjust", "out", "in"]
+    first_page = client.get("/api/v1/movements?limit=2", headers=headers).json()["items"]
+    second_page = client.get(
+        "/api/v1/movements?limit=2&offset=2", headers=headers
+    ).json()["items"]
+    assert [m["id"] for m in first_page + second_page] == [m["id"] for m in items]
+
+
 def test_inventory_is_org_scoped(client):
     headers_a, _store, _product = _setup(client)
     token_b = tokens_from(

@@ -1,6 +1,7 @@
 # Architecture
 
-SmartStock AI backend is a modular FastAPI application backed by PostgreSQL.
+SmartStock AI is a modular FastAPI backend on PostgreSQL with a Flutter client
+(`mobile/`) for mobile, web and desktop.
 
 ## Layering
 
@@ -82,3 +83,43 @@ tests can run on SQLite while production and integration tests use PostgreSQL.
 - Authentication failures return a single generic message to avoid leaking which
   credential was wrong.
 - Cross-tenant access is prevented at both the service and database layers.
+
+## Flutter client
+
+```
+Views (modules/*/..._view.dart, Material 3, responsive)
+        |
+GetX controllers (modules/*, reactive state; PagedController for lists)
+        |
+Repositories (data/repositories: auth, catalog, inventory, analytics)
+        |
+ApiClient (core/network: Dio + AuthInterceptor) -> /api/v1
+```
+
+- **DI and routing**: `main.dart` registers config, token storage, cache,
+  `ApiClient`, repositories, `SessionService` and `ConnectivityService` as
+  permanent GetX services. `routes/app_pages.dart` binds per-screen controllers
+  and guards authenticated routes with `AuthMiddleware`. The splash route
+  restores a stored session via `/auth/me`.
+- **Networking**: one `Dio` instance with `X-Request-ID` and `AuthInterceptor`
+  (a `QueuedInterceptor`). On a 401 it refreshes once via `/auth/refresh`;
+  concurrent 401s wait behind that single refresh, and refresh/retry use a
+  separate interceptor-free `Dio` to avoid recursion and queue deadlocks. A
+  failed refresh clears tokens and routes to login. All failures surface as a
+  typed `ApiException` parsed from the backend error envelope, including
+  per-field validation messages.
+- **Data fidelity**: the backend serialises `Decimal` as JSON strings; DTOs parse
+  both strings and numbers. Every number on screen comes from an API response.
+- **States**: `AsyncStateView` renders loading, error (retry), empty, offline
+  and data. The dashboard and first inventory page store the last successful
+  response in `shared_preferences` and, only when the server is unreachable,
+  show it with an "Offline - showing data saved <time>" banner.
+- **RBAC in the UI**: `RoleGate` hides write actions below `manager`; the
+  backend remains the source of truth.
+- **Configuration**: `API_BASE_URL` via `--dart-define`. Web builds with an
+  empty value use same-origin `/api/v1` behind the nginx reverse proxy;
+  desktop and mobile call the API directly.
+- **Tests**: DTO parsing, error mapping and the refresh interceptor
+  (fake Dio adapter), controllers over real repositories with a fake backend,
+  widget tests for each main screen, and `test/live` contract tests that run the
+  repositories against a running backend.

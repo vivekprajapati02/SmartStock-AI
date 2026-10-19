@@ -1,4 +1,4 @@
-# SmartStock AI - local development stack (API + PostgreSQL).
+# SmartStock AI - local development stack (PostgreSQL + API + web client).
 # Usage: docker compose up --build
 services:
   db:
@@ -36,6 +36,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  # Flutter web client behind nginx; /api is proxied to the api service so the
+  # browser uses one origin: http://localhost:8080
+  web:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+    environment:
+      API_UPSTREAM: http://api:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
 
 volumes:
   smartstock_pgdata:

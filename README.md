@@ -6,10 +6,11 @@ AI-powered inventory and demand forecasting platform.
 - **Backend:** Python + FastAPI + SQLAlchemy + Alembic + PostgreSQL
 - **ML:** pandas / NumPy / scikit-learn / LightGBM (Phase 5)
 
-This repository currently contains the **Phase 2 backend foundation plus Phase 3
-backend APIs**: schema, auth/RBAC, tenant isolation, catalogue, inventory
-movements, dashboard analytics from stored data, synthetic demo data, Docker
-tooling, and tests. The Flutter client is still pending.
+This repository currently contains **Phases 2 and 3**: the backend foundation
+(schema, auth/RBAC, tenant isolation, synthetic demo data, Docker tooling) plus
+catalogue, inventory-movement and dashboard APIs, and the Flutter client with
+Auth, Dashboard, Inventory, Movements and Catalogue screens on those real APIs.
+CSV import, forecasting, alerts and purchase orders are later phases.
 
 See `docs/IMPLEMENTATION_PLAN.md` for the full phased plan.
 
@@ -28,6 +29,16 @@ backend/
   alembic/        # migrations (initial schema + RLS policies)
   seed/           # reproducible synthetic data generator
   tests/          # unit / api / integration suites
+mobile/           # Flutter client (Android, iOS, web, Windows, macOS, Linux)
+  lib/
+    core/         # config, Dio client + auth interceptor, storage, paging, theme
+    data/         # DTO models + repositories (one per API area)
+    modules/      # GetX controllers + views: auth, shell, dashboard,
+                  # inventory, movements, catalog
+    routes/       # GetX routes, bindings, auth middleware
+    widgets/      # shared loading/error/empty/offline view, KPI cards, lists
+  test/           # unit, controller, widget and live API contract tests
+  Dockerfile      # web build served by nginx with /api reverse proxy
 docker-compose.yml
 docs/
 ```
@@ -69,8 +80,45 @@ The API is then available at http://localhost:8000 with interactive docs at
 docker compose up --build
 ```
 
-This starts PostgreSQL and the API (migrations run automatically on startup) on
-http://localhost:8000.
+This starts PostgreSQL, the API (migrations run automatically on startup) on
+http://localhost:8000, and the Flutter web client on http://localhost:8080.
+nginx in the web container proxies `/api` and `/health` to the API, so the
+browser uses a single origin.
+
+## Flutter client
+
+Prerequisites: Flutter 3.47+ (Dart 3.13+). The backend must be running and,
+for demo data, seeded (see above).
+
+```bash
+cd mobile
+flutter pub get
+
+# Web (Chrome) against a local backend
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000
+
+# Desktop / mobile call the API base URL directly
+flutter run -d windows --dart-define=API_BASE_URL=http://localhost:8000
+flutter run -d <android-device> --dart-define=API_BASE_URL=http://10.0.2.2:8000
+```
+
+`API_BASE_URL` is the backend origin (no `/api/v1`). On web, leaving it empty
+makes requests same-origin (`/api/v1/...`), which is how the Docker web image
+works behind its reverse proxy. Off web it defaults to `http://localhost:8000`.
+
+Demo login after seeding: organisation `synthetic-demo`, email
+`owner@synthetic-demo.com`, password `demo-password-123`. The dashboard shows a
+"Synthetic demo data" badge for that organisation; a newly registered
+organisation starts with zeros.
+
+Screens: sign in / register, Dashboard (KPIs + daily demand chart, 7/30/90
+days), Inventory (search, store and low-stock filters, detail with
+replenishment settings), Movements (ledger + record in/out/adjust), Catalogue
+(products, stores, categories, suppliers). Write actions are only shown to
+`manager` and above; the backend enforces the same rule. Access tokens are
+refreshed automatically on a 401. When the server is unreachable, the last
+successfully loaded dashboard and first inventory page are shown with an
+"Offline - showing data saved ..." banner; nothing is invented.
 
 ## Environment variables
 
@@ -167,6 +215,17 @@ TEST_DATABASE_URL=postgresql+psycopg2://smartstock:smartstock@localhost:5432/sma
 
 # Lint
 .venv/bin/ruff check app seed tests
+```
+
+Flutter:
+
+```bash
+cd mobile
+flutter analyze
+flutter test                      # unit, controller and widget tests
+
+# Live contract tests: the app's repositories against a running, seeded backend
+LIVE_API_URL=http://localhost:8000 flutter test test/live
 ```
 
 ## Documentation

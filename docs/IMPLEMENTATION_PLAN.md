@@ -1,6 +1,6 @@
 # SmartStock AI - Implementation Plan
 
-Status: **Phase 1 (planning) - awaiting review**
+Status: **Phases 1-3 complete; Phase 4 (CSV import) next**
 Author: AI Coding Agent
 Last updated: 2026-10-15
 
@@ -306,7 +306,9 @@ possible; RLS- and Postgres-specific behavior is exercised only against Postgres
    integration tests and CI.
 4. **Flutter targets**: **Mobile + Web + Desktop.**
 
-### Remaining environment caveat
-Flutter/Dart is still not installed, so `flutter analyze`/`flutter test` and
-platform builds cannot run in this environment; they will run in CI. If local
-Flutter execution is later required, it can be installed on request.
+### Environment notes (updated in Phase 3)
+Flutter 3.47 / Dart 3.13 is now available in the development environment, so
+`flutter analyze`, `flutter test` and `flutter build web` run locally. Native
+desktop/mobile builds need their platform toolchains (Visual Studio, Xcode,
+Android SDK) and are not verified locally yet; CI coverage comes in Phase 7.
+Section 1 records the original Phase 1 inspection and is kept for history.

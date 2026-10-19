@@ -62,8 +62,26 @@ enabled so policies apply even to the table owner.
 - `GET /health` — liveness (no dependencies).
 - `GET /health/ready` — readiness (database reachable).
 
+## Web client image
+
+`mobile/Dockerfile` builds the Flutter web app (`flutter build web` with an empty
+`API_BASE_URL`, i.e. same-origin requests) and serves it from `nginx:alpine`.
+`mobile/nginx.conf` serves the app shell with an `index.html` fallback and
+reverse-proxies `/api/` and `/health` to `${API_UPSTREAM}` (default
+`http://api:8000`), so the browser talks to a single origin and no CORS is
+needed.
+
+```bash
+docker compose up --build        # web on http://localhost:8080, API on :8000
+```
+
+For a standalone deployment, set `API_UPSTREAM` to the backend's internal URL.
+Desktop and mobile builds do not use the proxy; build them with
+`--dart-define=API_BASE_URL=https://api.example.com` and add that client origin
+to `CORS_ORIGINS` only if it is a browser.
+
 ## Notes for later phases
 
-CI/CD (GitHub Actions with a PostgreSQL service) and the Flutter build pipeline
-are scheduled for Phase 7 of the plan. Forecasting, CSV import, purchase orders,
-and the Flutter client are intentionally out of scope for Phase 2.
+CI/CD (GitHub Actions with a PostgreSQL service, plus Flutter analyze/test) is
+scheduled for Phase 7. CSV import, forecasting and purchase orders arrive in
+Phases 4-6.

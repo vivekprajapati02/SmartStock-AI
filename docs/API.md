@@ -76,8 +76,9 @@ Request:
 ```json
 { "refresh_token": "..." }
 ```
-Response `200` with a new token pair. `401` if the token is expired, invalid, or
-is not a refresh token.
+Response `200` with the same `{user, tokens}` shape as login (a fresh access
+and refresh token pair under `tokens`). `401` if the token is expired, invalid,
+or is not a refresh token.
 
 ### `GET /api/v1/auth/me`
 Requires `Authorization: Bearer <access_token>`. Returns the current user.

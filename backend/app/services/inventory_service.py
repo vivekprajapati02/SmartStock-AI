@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -168,6 +169,9 @@ def record_movement(
         quantity=quantity if movement_type != MovementType.ADJUST else delta,
         reference=reference,
         note=note,
+        # Stamped in Python: the DB's now() is per-transaction (Postgres) or
+        # per-second (SQLite), which makes the ledger order ambiguous.
+        occurred_at=datetime.now(UTC),
     )
     inventory.quantity_on_hand = inventory.quantity_on_hand + delta
     db.add(movement)
@@ -201,7 +205,8 @@ def list_movements(
         .join(Product, Product.id == StockMovement.product_id)
         .join(Store, Store.id == StockMovement.store_id)
         .where(*filters)
-        .order_by(StockMovement.occurred_at.desc())
+        # The id tiebreaker keeps LIMIT/OFFSET pages stable.
+        .order_by(StockMovement.occurred_at.desc(), StockMovement.id.desc())
         .limit(limit)
         .offset(offset)
     ).all()
